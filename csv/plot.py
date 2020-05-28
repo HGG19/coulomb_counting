@@ -41,25 +41,24 @@ with open('results.csv', 'r') as csvfile:
 #plt.plot(e, f, color='y')
 
 # Plot SOC
-y = []
-with open('data.csv', 'r') as csvfile:
-    plots = csv.reader(csvfile, delimiter=',')
-    for row in plots:
-        y.append(float(row[1]))
+#y = []
+#with open('data.csv', 'r') as csvfile:
+#    plots = csv.reader(csvfile, delimiter=',')
+#    for row in plots:
+#        y.append(float(row[1]))
+#
+#x = []
+#z = []
+#with open('results.csv', 'r') as csvfile:
+#    plots = csv.reader(csvfile, delimiter=',')
+#    i = 0.0
+#    for row in plots:
+#        x.append(float(i))
+#        z.append(float(row[1]))
+#        i += float(row[0])
 
-x = []
-z = []
-with open('results.csv', 'r') as csvfile:
-    plots = csv.reader(csvfile, delimiter=',')
-    i = 0.0
-    for row in plots:
-        x.append(float(i))
-        z.append(float(row[1]))
-        i += float(row[0])
-
-
-plt.plot(x, y, color='r')
-plt.plot(x, z, color='y')
+plt.plot(x, y, color='r', linewidth=1)
+plt.plot(x, z, color='y', linewidth=.5)
 
 plt.legend()
 plt.show()

@@ -17,7 +17,8 @@ for i = 2:size(data, 1)
     load_cycles(i, 2) = data(i, 2);
 end
 % Sim
-SOC = 0.97; % Starting SOC on a good day, 0.92 goes below 1%
+SOC = 0.92; % Starting SOC on a bad day
+V = 0;
 prev_iR1 = 0;
 results = zeros(size(load_cycles, 2), 4);
 for j = 1 : size(load_cycles, 1)
@@ -25,13 +26,13 @@ for j = 1 : size(load_cycles, 1)
     i = load_cycles(j, 2);
 
     % Calculate current used for diffusion voltage calculation
-    R1 = 0.1;
-    C1 = 1e-3;
+    R1 = 0.002;
+    C1 = 0.000008;
     iR1 = exp(-sample_length / (R1 * C1)) * prev_iR1 + (1 - exp(-sample_length / (R1 * C1))) * i;
     
     % Calculate terminal voltage
     [value index] = min(abs(SOC_lut - SOC));
-    R0 = 1;
+    R0 = .0000000001;
     V = (OCV_lut(index) - (i * R0) - (R1 * prev_iR1));
 
     % Solve and discretize d z(t) / dt = -n(t) * i(t) / Q where n(t) is the coloumbic efficiency and Q, total capacity, is given in seconds.
@@ -46,20 +47,6 @@ for j = 1 : size(load_cycles, 1)
     results(j, 1) = sample_length;
     results(j, 2) = 100 * SOC;
     results(j, 3) = i;
-    results(j, 4) = V;
+    results(j, 4) = V * S - 9.75; % Maybe hysteresis
 end
-disp("Done")
-disp("Sim SOC: " + 100 * SOC + ", Analyze SOC: " + data(end, 3))
 csvwrite("csv/results.csv", results);
-
-
-% Todo: Add equivalent series resistance
-function next_z = coloumb_count(prev_z, sample_length, i)
-    SOC = coloumb_count(SOC, load_cycles(i, 1), load_cycles(i, 2));
-    % Calculate terminal voltage
-
-    % Solve and discretize d z(t) / dt = -n(t) * i(t) / Q where n(t), coloumbic efficiency, is assumed to be 1, Q, total capacity, is given in seconds.
-    P = 2;
-    Q = 6528.6 * 3.6 * P; % Nominal capacity from mAh to As
-    next_z = prev_z - ( sample_length * i / Q);
-end
