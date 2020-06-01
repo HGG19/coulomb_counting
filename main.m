@@ -7,32 +7,73 @@ OCV_lut = [ 3.0316, 3.2440, 3.3374, 3.4022, 3.4521, 3.4930, 3.5277, 3.5577, 3.58
 
 SOC_lut = [1.355e-05, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065, 0.07, 0.075, 0.08, 0.085, 0.09, 0.095, 0.1, 0.105, 0.11, 0.115, 0.12, 0.125, 0.13, 0.135, 0.14, 0.145, 0.15, 0.155, 0.16, 0.165, 0.17, 0.175, 0.18, 0.185, 0.19, 0.195, 0.2, 0.205, 0.21, 0.215, 0.22, 0.225, 0.23, 0.235, 0.24, 0.245, 0.25, 0.255, 0.26, 0.265, 0.27, 0.275, 0.28, 0.285, 0.29, 0.295, 0.3, 0.305, 0.31, 0.315, 0.32, 0.325, 0.33, 0.335, 0.34, 0.345, 0.35, 0.355, 0.36, 0.365, 0.37, 0.375, 0.38, 0.385, 0.39, 0.395, 0.4, 0.405, 0.41, 0.415, 0.42, 0.425, 0.43, 0.435, 0.44, 0.445, 0.45, 0.455, 0.46, 0.465, 0.47, 0.475, 0.48, 0.485, 0.49, 0.495, 0.5, 0.505, 0.51, 0.515, 0.52, 0.525, 0.53, 0.535, 0.54, 0.545, 0.55, 0.555, 0.56, 0.565, 0.57, 0.575, 0.58, 0.585, 0.59, 0.595, 0.6, 0.605, 0.61, 0.615, 0.62, 0.625, 0.63, 0.635, 0.64, 0.645, 0.65, 0.655, 0.66, 0.665, 0.67, 0.675, 0.68, 0.685, 0.69, 0.695, 0.7, 0.705, 0.71, 0.715, 0.72, 0.725, 0.73, 0.735, 0.74, 0.745, 0.75, 0.755, 0.76, 0.765, 0.77, 0.775, 0.78, 0.785, 0.79, 0.795, 0.8, 0.805, 0.81, 0.815, 0.82, 0.825, 0.83, 0.835, 0.84, 0.845, 0.85, 0.855, 0.86, 0.865, 0.87, 0.875, 0.88, 0.885, 0.89, 0.895, 0.9, 0.905, 0.91, 0.915, 0.92, 0.925, 0.93, 0.935, 0.94, 0.945, 0.95, 0.955, 0.96, 0.965, 0.97, 0.975, 0.98, 0.985, 0.99, 0.995, 1];
 
-% Read load cycle from csv file
-data = csvread('csv/data.csv'); % Data format: time, soc, cc, v, i
-data = [data(1:end, 1), data(1:end, 5), data(1:end, 2), data(1:end, 4)];
+% data = zeros(0, 0);
+% load_cycles = zeros(0, 0);
+% ts = true;
+% if ts
+%     % Read load cycle from csv file with ts voltage
+%     data = csvread('csv/data_ts.csv'); % Data format: time, soc, cc, v, i
+%     data = [data(1:end, 1), data(1:end, 5), data(1:end, 2), data(1:end, 4)];
+% else
+%     % Read load cycle from csv file with ams voltage
+%     data = csvread('csv/data_ams.csv'); % Data format: time, soc, cc, average v, i
+%     data = [data(1:end, 1), data(1:end, 5), data(1:end, 2), S * data(1:end, 4)];
+% end
+% load_cycles = zeros(size(data, 1), 2);
+% load_cycles(1, 2) = data(1, 2);
+% for i = 2:size(data, 1)
+%     load_cycles(i, 1) = data(i, 1) - data(i - 1, 1);
+%     load_cycles(i, 2) = data(i, 2);
+% end
+% 
+
+% Setup the Import Options and import the data
+opts = delimitedTextImportOptions("NumVariables", 8);
+
+% Specify range and delimiter
+opts.DataLines = [9, Inf];
+opts.Delimiter = ";";
+
+% Specify column names and types
+opts.VariableNames = ["Times", "VoltageV", "CurrentA", "PowerW", "Temp_IVTmodC", "ErrRateCAN1", "ErrRateCAN2", "VarName8"];
+opts.VariableTypes = ["double", "double", "double", "double", "double", "double", "double", "string"];
+
+% Specify file level properties
+opts.ExtraColumnsRule = "ignore";
+opts.EmptyLineRule = "read";
+
+% Specify variable properties
+opts = setvaropts(opts, "VarName8", "WhitespaceRule", "preserve");
+opts = setvaropts(opts, "VarName8", "EmptyFieldRule", "auto");
+
+% Import the data
+data = readtable("csv/endu_merge.log", opts); % Time, Voltage, Current, Power, Temp, ErrRate1, ErrRate2
+data = table2array(data(1:end, 1:5));
+
 load_cycles = zeros(size(data, 1), 2);
 load_cycles(1, 2) = data(1, 2);
 for i = 2:size(data, 1)
     load_cycles(i, 1) = data(i, 1) - data(i - 1, 1);
-    load_cycles(i, 2) = data(i, 2);
+    load_cycles(i, 2) = data(i, 3);
 end
-% Sim
+
+% % Sim
 SOC = 0.92; % Starting SOC on a bad day
 V = 0;
 prev_iR1 = 0;
-results = zeros(size(load_cycles, 2), 4);
+results = zeros(size(load_cycles, 1), 4);
 for j = 1 : size(load_cycles, 1)
     sample_length =  load_cycles(j, 1);
     i = load_cycles(j, 2);
 
     % Calculate current used for diffusion voltage calculation
-    R1 = 0.002;
-    C1 = 0.000008;
+    R1 = 0.001;
+    C1 = 0.001;
     iR1 = exp(-sample_length / (R1 * C1)) * prev_iR1 + (1 - exp(-sample_length / (R1 * C1))) * i;
     
     % Calculate terminal voltage
     [value index] = min(abs(SOC_lut - SOC));
-    R0 = .0000000001;
+    R0 = .000001;
     V = (OCV_lut(index) - (i * R0) - (R1 * prev_iR1));
 
     % Solve and discretize d z(t) / dt = -n(t) * i(t) / Q where n(t) is the coloumbic efficiency and Q, total capacity, is given in seconds.
@@ -47,6 +88,6 @@ for j = 1 : size(load_cycles, 1)
     results(j, 1) = sample_length;
     results(j, 2) = 100 * SOC;
     results(j, 3) = i;
-    results(j, 4) = V * S - 9.75; % Maybe hysteresis
+    results(j, 4) = V * S - 8; % TODO model hystersis 
 end
 csvwrite("csv/results.csv", results);
